@@ -1,14 +1,20 @@
+// semaforo.h
 #ifndef SEMAFORO_H
 #define SEMAFORO_H
 
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/sem.h>
+#include <pthread.h>
 
-// Funciones auxiliares para inicializar, hacer wait y Signal
+// Estructura para el semáforo utilizando mutex y variable de condición
+typedef struct {
+    int value;                // Valor del semáforo (número de recursos disponibles)
+    pthread_mutex_t mutex;    // Mutex para proteger el acceso
+    pthread_cond_t cond;      // Variable de condición para esperar y liberar el semáforo
+} Semaforo;
+
+// Declaración de funciones
+void initSem(Semaforo *sem, int valor);
+void Wait(Semaforo *sem);
+void Signal(Semaforo *sem);
 void error(const char* errorInfo);
-void Signal(int semid, int numSem);
-void Wait(int semid, int numSem);
-void initSem(int semid, int numSem, int valor);
 
 #endif // SEMAFORO_H

@@ -1,37 +1,49 @@
+// semaforo.c
 #include "semaforo.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/sem.h>
 
+// Función de manejo de errores
 void error(const char* errorInfo) {
     perror(errorInfo);
     exit(EXIT_FAILURE);
 }
 
-void Signal(int semid, int numSem) {
-    struct sembuf sops;
-    sops.sem_num = numSem;
-    sops.sem_op = 1;   // Operación de señalización
-    sops.sem_flg = 0;
-
-    if (semop(semid, &sops, 1) == -1) {
-        error("Error al hacer Signal");
+// Inicializa el semáforo
+void initSem(Semaforo *sem, int valor) {
+    sem->value = valor;
+    if (pthread_mutex_init(&(sem->mutex), NULL) != 0) {
+        error("Error inicializando mutex");
+    }
+    if (pthread_cond_init(&(sem->cond), NULL) != 0) {
+        error("Error inicializando variable de condición");
     }
 }
 
-void Wait(int semid, int numSem) {
-    struct sembuf sops;
-    sops.sem_num = numSem;
-    sops.sem_op = -1;  // Operación de espera
-    sops.sem_flg = 0;
+// Realiza la operación Wait (decrecer el valor del semáforo)
+void Wait(Semaforo *sem) {
+    pthread_mutex_lock(&(sem->mutex));
 
-    if (semop(semid, &sops, 1) == -1) {
-        error("Error al hacer el Wait");
+    // Si no hay recursos disponibles, espera
+    while (sem->value <= 0) {
+        pthread_cond_wait(&(sem->cond), &(sem->mutex));
     }
+
+    // Decrementa el valor del semáforo (alguien ha tomado un recurso)
+    sem->value--;
+
+    pthread_mutex_unlock(&(sem->mutex));
 }
 
-void initSem(int semid, int numSem, int valor) {
-    if (semctl(semid, numSem, SETVAL, valor) < 0) {
-        error("Error iniciando semáforo");
-    }
+// Realiza la operación Signal (incrementar el valor del semáforo)
+void Signal(Semaforo *sem) {
+    pthread_mutex_lock(&(sem->mutex));
+
+    // Incrementa el valor del semáforo (libera un recurso)
+    sem->value++;
+
+    // Despierta a un hilo esperando si es necesario
+    pthread_cond_signal(&(sem->cond));
+
+    pthread_mutex_unlock(&(sem->mutex));
 }
