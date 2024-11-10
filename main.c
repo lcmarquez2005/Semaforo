@@ -28,10 +28,10 @@ int main() {
     initSem(&sem, numPlazas);
     printf("Hay %d plazas libres\n", numPlazas);
 
-    pthread_t threads[2];  // Array para guardar los hilos
+    pthread_t threads[4];  // Array para guardar los hilos
 
     // Crear dos hilos para simular los procesos hijos
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 4; i++) {
         if (pthread_create(&threads[i], NULL, trabajo, (void*)&sem) != 0) {
             perror("Error creando el hilo");
             exit(EXIT_FAILURE);
