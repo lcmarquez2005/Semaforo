@@ -1,14 +1,17 @@
 #ifndef SEMAFORO_H
 #define SEMAFORO_H
 
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/sem.h>
+#include <windows.h>
 
-// Funciones auxiliares para inicializar, hacer wait y Signal
-void error(const char* errorInfo);
-void Signal(int semid, int numSem);
-void Wait(int semid, int numSem);
-void initSem(int semid, int numSem, int valor);
+// Estructura personalizada para un semáforo
+typedef struct {
+    HANDLE semHandle; // Manejador del semáforo en Windows
+} Semaforo;
+
+// Funciones para manejar el semáforo
+void sem_init(Semaforo* sem, int valor);      // Inicializa el semáforo
+void sem_wait(Semaforo* sem);                 // Decrementa el semáforo
+void sem_signal(Semaforo* sem);               // Incrementa el semáforo
+void sem_destroy(Semaforo* sem);              // Destruye el semáforo
 
 #endif // SEMAFORO_H

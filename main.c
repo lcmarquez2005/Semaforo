@@ -1,50 +1,46 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include "semaforo.h"  // Incluir el archivo de semáforos
+#include <windows.h>
+#include "semaforo.h"
+
+// Función de ejemplo que simula el trabajo de un hilo
+DWORD WINAPI trabajo(LPVOID param) {
+    Semaforo* sem = (Semaforo*)param;
+    
+    sem_wait(sem);  // Solicita acceso al semáforo (decrementa el contador)
+    printf("Hilo %lu entra y trabaja\n", GetCurrentThreadId());
+    Sleep(2000); // Simula trabajo
+    printf("Hilo %lu termina su trabajo\n", GetCurrentThreadId());
+    sem_signal(sem);  // Libera el semáforo (incrementa el contador)
+    
+    return 0;
+}
 
 int main() {
-    printf("Sincronizacion con Semaforos\n");
-    int semaforo;
-    int numPlazas = 2; // Configurar el número de plazas disponibles
+    Semaforo sem;
+    sem_init(&sem, 2);  // Inicializa el semáforo con 2 recursos disponibles
 
-    // Crear semáforo con permisos 0700
-    if ((semaforo = semget(IPC_PRIVATE, 1, IPC_CREAT | 0700)) < 0) {
-        error("Error al crear semáforo con semget");
-    }
+    HANDLE hilos[3];
 
-    // Inicializar el semáforo con el número de plazas
-    initSem(semaforo, 0, numPlazas);
-    printf("Hay %d plazas libres\n", numPlazas);
-
-    for (int i = 0; i < 2; i++) { // Crear dos procesos hijo para ilustrar la sincronización
-        pid_t pid = fork();
-        if (pid == -1) {
-            error("Error en el fork");
-        }
-
-        if (pid == 0) { // Código del proceso hijo
-            Wait(semaforo, 0);
-            printf("Hijo %d entra, el padre o otro hijo espera\n", getpid());
-            sleep(3); // Simular trabajo
-            printf("Hijo %d sale\n", getpid());
-            Signal(semaforo, 0);
-            exit(EXIT_SUCCESS);
+    // Crear 3 hilos para simular trabajo
+    for (int i = 0; i < 3; i++) {
+        hilos[i] = CreateThread(NULL, 0, trabajo, (LPVOID)&sem, 0, NULL);
+        if (hilos[i] == NULL) {
+            printf("Error al crear hilo: %d\n", GetLastError());
+            exit(EXIT_FAILURE);
         }
     }
 
-    // Esperar a que todos los procesos hijo terminen
-    for (int i = 0; i < 2; i++) {
-        wait(NULL);
+    // Esperar a que todos los hilos terminen
+    WaitForMultipleObjects(3, hilos, TRUE, INFINITE);
+
+    // Destruir el semáforo
+    sem_destroy(&sem);
+
+    // Cerrar los hilos
+    for (int i = 0; i < 3; i++) {
+        CloseHandle(hilos[i]);
     }
 
-    // Liberar el semáforo
-    if (semctl(semaforo, 0, IPC_RMID) == -1) {
-        error("Error al liberar el semáforo");
-    }
-
-    printf("Semáforo liberado y finalizado\n");
     return 0;
 }
