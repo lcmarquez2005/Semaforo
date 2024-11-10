@@ -1,5 +1,7 @@
 #include <stdio.h>
+
 #include <pthread.h>
+
 #include <unistd.h>
 
 // Estructura básica de un semáforo
@@ -23,42 +25,42 @@ void semaphore_wait(Semaphore* semaforo) {
         pthread_mutex_lock(&semaforo->mutex);  // Intentar nuevamente
     }
     semaforo->value--;  // Descontar semáforo
-    pthread_mutex_unlock(&sem->mutex);  // Liberar el mutex
+    pthread_mutex_unlock(&semaforo->mutex);  // Liberar el mutex
 }
 
 // Señalizar (up) en el semáforo
-void semaphore_signal(Semaphore* sem) {
-    pthread_mutex_lock(&sem->mutex);  // Bloqueo de la sincronización
-    sem->value++;  // Incrementar semáforo
-    pthread_mutex_unlock(&sem->mutex);  // Liberar el mutex
+void semaphore_signal(Semaphore* semaforo) {
+    pthread_mutex_lock(&semaforo->mutex);  // Bloqueo de la sincronización
+    semaforo->value++;  // Incrementar semáforo
+    pthread_mutex_unlock(&semaforo->mutex);  // Liberar el mutex
 }
 
 // Función de los hilos que acceden a la sección crítica
 void* acceso_recurso(void* arg) {
-    Semaphore* sem = (Semaphore*)arg;
+    Semaphore* semaforo = (Semaphore*)arg;
 
     printf("Hilo %ld esperando...\n", pthread_self());
-    semaphore_wait(sem);  // Esperar a que el semáforo esté disponible
+    semaphore_wait(semaforo);  // Esperar a que el semáforo esté disponible
     
     // Sección crítica
     printf("Hilo %ld accede al recurso.\n", pthread_self());
     sleep(1);  // Simular trabajo con el recurso
 
-    semaphore_signal(sem);  // Liberar el semáforo
+    semaphore_signal(semaforo);  // Liberar el semáforo
 
     return NULL;
 }
 
 int main() {
     pthread_t hilos[5];
-    Semaphore sem;
+    Semaphore semaforo;
 
     // Inicializamos el semáforo con valor 1 (indica que el recurso está disponible)
-    semaphore_init(&sem, 1);
+    semaphore_init(&semaforo, 1);
 
     // Creamos 5 hilos que intentan acceder al recurso
     for (int i = 0; i < 5; i++) {
-        pthread_create(&hilos[i], NULL, acceso_recurso, (void*)&sem);
+        pthread_create(&hilos[i], NULL, acceso_recurso, (void*)&semaforo);
     }
 
     // Esperamos que todos los hilos terminen
@@ -67,7 +69,7 @@ int main() {
     }
 
     // Destruimos el mutex al final
-    pthread_mutex_destroy(&sem.mutex);
+    pthread_mutex_destroy(&semaforo.mutex);
 
     return 0;
 }
